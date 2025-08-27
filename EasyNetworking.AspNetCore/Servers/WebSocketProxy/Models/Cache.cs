@@ -1,6 +1,6 @@
 ﻿using System.Collections.Concurrent;
 
-namespace EasyNetworking.ApsNetCore.Servers.WebSocketProxy.Models
+namespace EasyNetworking.AspNetCore.Servers.WebSocketProxy.Models
 {
     internal static class Cache
     {

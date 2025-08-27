@@ -1,6 +1,6 @@
 ﻿using System.Net.WebSockets;
 
-namespace EasyNetworking.ApsNetCore.Servers.WebSocketProxy.Models
+namespace EasyNetworking.AspNetCore.Servers.WebSocketProxy.Models
 {
     internal class WebSocketSession
     {

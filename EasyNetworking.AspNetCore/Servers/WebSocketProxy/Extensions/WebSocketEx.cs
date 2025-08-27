@@ -1,8 +1,8 @@
-﻿using EasyNetworking.ApsNetCore.Servers.WebSocketProxy.Models;
+﻿using EasyNetworking.AspNetCore.Servers.WebSocketProxy.Models;
 using Microsoft.AspNetCore.Http;
 using System.Net.WebSockets;
 
-namespace EasyNetworking.ApsNetCore.Servers.WebSocketProxy.Extensions
+namespace EasyNetworking.AspNetCore.Servers.WebSocketProxy.Extensions
 {
     public static class WebSocketEx
     {

@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using System.Net.WebSockets;
 
-namespace EasyNetworking.ApsNetCore.Servers.WebSocketProxy.Extensions
+namespace EasyNetworking.AspNetCore.Servers.WebSocketProxy.Extensions
 {
     public static class EndpointRouteBuilderEx
     {
