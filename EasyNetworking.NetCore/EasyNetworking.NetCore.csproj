@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+	<Title>Networking components for .NET Core projects</Title>
+	<Description>Client-side components for .NET Core projects like client-to-client communication, chat, gaming, etc.</Description>
+	<Copyright>Copyright © 2023</Copyright>
+	<PackageProjectUrl>https://github.com/meehi/EasyWebSocketProxy</PackageProjectUrl>
+	<RepositoryUrl>https://github.com/meehi/EasyWebSocketProxy</RepositoryUrl>
+	<PackageTags>websocket;proxy;forwarder;client-to-client;chat;communication;middleware;proxy-client</PackageTags>
+	<AssemblyVersion>1.0.0</AssemblyVersion>
+	<FileVersion>1.0.0</FileVersion>
+	<Version>1.0.0</Version>
+	<GeneratePackageOnBuild>False</GeneratePackageOnBuild>
+  </PropertyGroup>
+</Project>
