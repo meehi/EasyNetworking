@@ -1,4 +1,4 @@
-using EasyNetworking.ApsNetCore.Servers.WebSocketProxy.Extensions;
+using EasyNetworking.AspNetCore.Servers.WebSocketProxy.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
