@@ -1,4 +1,4 @@
-# EasyWebSocketProxy
+# WebSocketProxy
 Type based websocket communication between clients through a Middleware server (proxy-forwarder).
 
 The EasyNetworking library allows you to create client to client websocket communication (like chat or gaming applications) through a Middleware server. It's similiar to a hub client-server communication but without the limitation of message sizes. With EasyWebSocketProxy you can achive sending large binary data as well.
