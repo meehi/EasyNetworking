@@ -10,12 +10,12 @@
     <Title>Networking components for ASP.NET Core projects</Title>
 	<Description>Server-side components for ASP.NET Core projects like client-to-client communication, chat, gaming, etc. It can act as Middleware proxy / forwarder server.</Description>
 	<Copyright>Copyright © 2023</Copyright>
-	<PackageProjectUrl>https://github.com/meehi/EasyWebSocketProxy</PackageProjectUrl>
-	<RepositoryUrl>https://github.com/meehi/EasyWebSocketProxy</RepositoryUrl>
+	<PackageProjectUrl>https://github.com/meehi/EasyNetworking</PackageProjectUrl>
+	<RepositoryUrl>https://github.com/meehi/EasyNetworking</RepositoryUrl>
 	<PackageTags>websocket;proxy;forwarder;client-to-client;chat;communication;middleware;proxy-client</PackageTags>
-	<AssemblyVersion>1.0.0</AssemblyVersion>
-	<FileVersion>1.0.0</FileVersion>
-	<Version>1.0.0</Version>
+	<AssemblyVersion>1.1.0</AssemblyVersion>
+	<FileVersion>1.1.0</FileVersion>
+	<Version>1.1.0</Version>
 	<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
   </PropertyGroup>
 </Project>
