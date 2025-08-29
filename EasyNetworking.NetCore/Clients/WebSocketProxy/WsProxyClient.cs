@@ -1,5 +1,6 @@
 ﻿using EasyNetworking.NetCore.Clients.WebSocketProxy.Models;
 using System.Collections.Concurrent;
+using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
