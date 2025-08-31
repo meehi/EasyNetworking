@@ -60,7 +60,7 @@ namespace EasyNetworking.NetCore.Servers.Tcp
             try
             {
                 _serverSocket = new(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                _serverSocket.Bind(new IPEndPoint(GetLocalIPAddress(), (int)port!));
+                _serverSocket.Bind(new IPEndPoint(Utils.GetLocalIPAddress(), (int)port!));
                 _serverSocket.Listen(100);
 
                 foreach (Socket client in _serverSocket.IncommingConnections())
@@ -78,19 +78,6 @@ namespace EasyNetworking.NetCore.Servers.Tcp
             catch
             {
             }
-        }
-
-        private IPAddress GetLocalIPAddress()
-        {
-            var host = Dns.GetHostEntry(Dns.GetHostName());
-            foreach (var address in host.AddressList)
-            {
-                if (address.AddressFamily == AddressFamily.InterNetwork)
-                {
-                    return address;
-                }
-            }
-            throw new Exception("No network adapters with an IPv4 address in the system!");
         }
         #endregion
     }
