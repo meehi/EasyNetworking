@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36414.22
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EasyNetworking.NetCore", "EasyNetworking.NetCore\EasyNetworking.NetCore.csproj", "{ECD28FF2-2D39-4E34-B414-93AB59D90910}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SampleApp", "SampleApp", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client1", "SampleApp\Client1\Client1.csproj", "{B5C4C67D-DAA6-CEE4-0AEB-BD4954F9F2C1}"
@@ -17,16 +15,14 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "SharedData", "SampleApp\Sha
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EasyNetworking.AspNetCore", "EasyNetworking.AspNetCore\EasyNetworking.AspNetCore.csproj", "{BC057605-021C-CBA0-861A-BC3F4B2ACC09}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EasyNetworking.NetCore", "EasyNetworking.NetCore\EasyNetworking.NetCore.csproj", "{22E7F947-9B97-4E17-AAD2-33060C7D534C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{ECD28FF2-2D39-4E34-B414-93AB59D90910}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{ECD28FF2-2D39-4E34-B414-93AB59D90910}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{ECD28FF2-2D39-4E34-B414-93AB59D90910}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{ECD28FF2-2D39-4E34-B414-93AB59D90910}.Release|Any CPU.Build.0 = Release|Any CPU
 		{B5C4C67D-DAA6-CEE4-0AEB-BD4954F9F2C1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B5C4C67D-DAA6-CEE4-0AEB-BD4954F9F2C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B5C4C67D-DAA6-CEE4-0AEB-BD4954F9F2C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -43,6 +39,10 @@ Global
 		{BC057605-021C-CBA0-861A-BC3F4B2ACC09}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BC057605-021C-CBA0-861A-BC3F4B2ACC09}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BC057605-021C-CBA0-861A-BC3F4B2ACC09}.Release|Any CPU.Build.0 = Release|Any CPU
+		{22E7F947-9B97-4E17-AAD2-33060C7D534C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{22E7F947-9B97-4E17-AAD2-33060C7D534C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{22E7F947-9B97-4E17-AAD2-33060C7D534C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{22E7F947-9B97-4E17-AAD2-33060C7D534C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
