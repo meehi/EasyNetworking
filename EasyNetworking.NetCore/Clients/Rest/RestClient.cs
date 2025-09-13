@@ -1,4 +1,5 @@
 ﻿using EasyNetworking.NetCore.Clients.Rest.Extensions;
+using EasyNetworking.NetCore.Clients.Rest.Models;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
@@ -6,61 +7,40 @@ using System.Text.Json;
 
 namespace EasyNetworking.NetCore.Clients.Rest
 {
-    public abstract partial class RestClient
+    public class RestClient(RestOptions? restOptions = null)
     {
-        #region Public methods
-        public async Task<T?> PostAsync<T>(string host, object? obj = null, string? basicUsername = null, string? basicPassword = null)
-        {
-            T? result = default;
-
-            string responseString = await RequestAsync(host, obj, basicUsername, basicPassword);
-            if (!string.IsNullOrEmpty(responseString))
-                try
-                {
-                    result = responseString.Deserialize<T>();
-                }
-                catch
-                {
-                }
-
-            return result;
-        }
-
-        public async Task PostAsync(string host, object? obj = null, string? basicUsername = null, string? basicPassword = null)
-        {
-            await RequestAsync(host, obj, basicUsername, basicPassword);
-        }
-
-        public virtual void OnResponseReceived(HttpStatusCode statusCode)
-        {
-        }
+        #region Public properties
+        public RestOptions? RestOptions { get; private set; } = restOptions;
         #endregion
 
-        #region Private methods
-        private async Task<string> RequestAsync(string host, object? obj = null, string? basicUsername = null, string? basicPassword = null)
+        #region Public methods
+        public async Task<RestResponse<T?>> RequestAsync<T>(string host, object? obj = null)
         {
-            string result = string.Empty;
+            RestResponse<T?> result = new();
+
+            HttpClient client = new();
+            HttpResponseMessage response;
+            if (RestOptions != null && RestOptions.BasicAuth != null)
+                if (!string.IsNullOrEmpty(RestOptions.BasicAuth.Username) && !string.IsNullOrEmpty(RestOptions.BasicAuth.Password))
+                    client.DefaultRequestHeaders.Add("Authorization", "Basic " + Convert.ToBase64String(Encoding.GetEncoding("ISO-8859-1").GetBytes(RestOptions.BasicAuth.Username + ":" + RestOptions.BasicAuth.Password)));
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            if (obj != null)
+                response = await client.PostAsync(host, new StringContent(JsonSerializer.Serialize(obj, RestOptions?.RequestJsonSerializerOptions), Encoding.UTF8, "application/json"));
+            else
+                response = await client.PostAsync(host, new StringContent(""));
+
+            result.StatusCode = response.StatusCode;
             try
             {
-                HttpClient client = new();
-                HttpResponseMessage response;
-                if (!string.IsNullOrEmpty(basicUsername) && !string.IsNullOrEmpty(basicPassword))
-                    client.DefaultRequestHeaders.Add("Authorization", "Basic " + Convert.ToBase64String(Encoding.GetEncoding("ISO-8859-1").GetBytes(basicUsername + ":" + basicPassword)));
-                client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                if (obj != null)
-                    response = await client.PostAsync(host, new StringContent(JsonSerializer.Serialize(obj), Encoding.UTF8, "application/json"));
-                else
-                    response = await client.PostAsync(host, new StringContent(""));
-
-                OnResponseReceived(response.StatusCode);
-
-                if (response.StatusCode == HttpStatusCode.OK)
-                    result = await response.Content.ReadAsStringAsync();
+                result.ResponseString = await response.Content.ReadAsStringAsync();
             }
             catch
             {
             }
+
+            if (response.StatusCode == HttpStatusCode.OK && !string.IsNullOrEmpty(result.ResponseString))
+                result.ResponseObject = result.ResponseString.Deserialize<T>(RestOptions?.ResponseJsonSerializerOptions);
 
             return result;
         }

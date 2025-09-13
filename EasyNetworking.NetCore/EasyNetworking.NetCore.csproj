@@ -23,9 +23,9 @@
 		<PackageProjectUrl>https://github.com/meehi/EasyNetworking</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/meehi/EasyNetworking</RepositoryUrl>
 		<PackageTags>websocket;proxy;forwarder;client-to-client;chat;communication;middleware;proxy-client</PackageTags>
-		<AssemblyVersion>1.9.0</AssemblyVersion>
-		<FileVersion>1.9.0</FileVersion>
-		<Version>1.9.0</Version>
+		<AssemblyVersion>1.10.0</AssemblyVersion>
+		<FileVersion>1.10.0</FileVersion>
+		<Version>1.10.0</Version>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 	</PropertyGroup>
 
