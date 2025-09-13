@@ -14,23 +14,41 @@ namespace EasyNetworking.NetCore.Clients.Rest
         #endregion
 
         #region Public methods
-        public async Task<RestResponse<T?>> RequestAsync<T>(string host, object? obj = null)
+        public async Task<RestResponse<T?>> PostAsync<T>(string host, object? obj = null)
+        {
+            return await RequestAsync<T>(host, HttpMethod.Post, obj);
+        }
+
+        public async Task<RestResponse<T?>> GetAsync<T>(string host)
+        {
+            return await RequestAsync<T>(host, HttpMethod.Get);
+        }
+        #endregion
+
+        #region Private methods
+        private async Task<RestResponse<T?>> RequestAsync<T>(string host, HttpMethod httpMethod, object? obj = null)
         {
             RestResponse<T?> result = new();
 
             HttpClient client = new();
-            HttpResponseMessage response;
             if (RestOptions != null && RestOptions.BasicAuth != null)
                 if (!string.IsNullOrEmpty(RestOptions.BasicAuth.Username) && !string.IsNullOrEmpty(RestOptions.BasicAuth.Password))
                     client.DefaultRequestHeaders.Add("Authorization", "Basic " + Convert.ToBase64String(Encoding.GetEncoding("ISO-8859-1").GetBytes(RestOptions.BasicAuth.Username + ":" + RestOptions.BasicAuth.Password)));
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            if (obj != null)
-                response = await client.PostAsync(host, new StringContent(JsonSerializer.Serialize(obj, RestOptions?.RequestJsonSerializerOptions), Encoding.UTF8, "application/json"));
-            else
-                response = await client.PostAsync(host, new StringContent(""));
+            
+            HttpResponseMessage? response = null;
+            
+            if (httpMethod == HttpMethod.Post)
+                if (obj != null)
+                    response = await client.PostAsync(host, new StringContent(JsonSerializer.Serialize(obj, RestOptions?.RequestJsonSerializerOptions), Encoding.UTF8, "application/json"));
+                else
+                    response = await client.PostAsync(host, new StringContent(""));
 
-            result.StatusCode = response.StatusCode;
+            if (httpMethod == HttpMethod.Get)
+                response = await client.GetAsync(host);
+
+            result.StatusCode = response!.StatusCode;
             try
             {
                 result.ResponseString = await response.Content.ReadAsStringAsync();
