@@ -31,9 +31,14 @@ namespace EasyNetworking.NetCore.Clients.Rest
             RestResponse<T?> result = new();
 
             HttpClient client = new();
+
             if (RestOptions != null && RestOptions.BasicAuth != null)
                 if (!string.IsNullOrEmpty(RestOptions.BasicAuth.Username) && !string.IsNullOrEmpty(RestOptions.BasicAuth.Password))
                     client.DefaultRequestHeaders.Add("Authorization", "Basic " + Convert.ToBase64String(Encoding.GetEncoding("ISO-8859-1").GetBytes(RestOptions.BasicAuth.Username + ":" + RestOptions.BasicAuth.Password)));
+            if (RestOptions != null && RestOptions.BearerAuth != null)
+                if (!string.IsNullOrEmpty(RestOptions.BearerAuth.Token))
+                    client.DefaultRequestHeaders.Add("Authorization", $"Bearer {RestOptions.BearerAuth.Token}");
+
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             
