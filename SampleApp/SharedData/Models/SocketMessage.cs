@@ -4,5 +4,6 @@
     {
         public string? Message { get; set; }
         public bool ReplyRequired { get; set; }
+        public bool ReplySimpleString { get; set; }
     }
 }

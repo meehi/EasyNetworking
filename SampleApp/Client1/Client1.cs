@@ -27,39 +27,46 @@ namespace Client1
             }
 
             Console.WriteLine();
-            Console.WriteLine("Press enter to send Type message to Client 2...");
+            Console.Write("1) Press enter to send Type message to Client 2...");
             Console.ReadLine();
             await wsProxyClient.SendAsync<SocketMessage>(new() { Message = "Hello from Client 1" });
             Console.WriteLine("Type message sent!");
 
             Console.WriteLine();
-            Console.WriteLine("Press enter to send byte array to Client 2...");
+            Console.Write("2) Press enter to send byte array to Client 2...");
             Console.ReadLine();
             byte[] data = Encoding.UTF8.GetBytes("Hello from Client 1! This is going to be a byte array message!");
             await wsProxyClient.SendAsync(data);
             Console.WriteLine("Byte array sent!");
 
             Console.WriteLine();
-            Console.WriteLine("Press enter to send Type message and wait for the answer...");
+            Console.Write("3) Press enter to send Type message and wait for the answer...");
             Console.ReadLine();
-            var response = await wsProxyClient.SendAsync<SocketMessage>(new() { Message = "This message is waiting for an answer!", ReplyRequired = true }, typeof(SocketMessage), TimeSpan.FromSeconds(120));
-            if (response != null)
-                Console.WriteLine(((SocketMessage)response).Message);
-
-            Console.WriteLine();
-            Console.WriteLine("Press enter to ask a question from Client 2...");
-            Console.ReadLine();
-            response = await wsProxyClient.SendAsync("This is a question. How do you do?", typeof(bool), TimeSpan.FromSeconds(10));
-            if (response != null)
+            SocketMessage? socketMessageResponse = await wsProxyClient.SendAsync<SocketMessage, SocketMessage>(new()
             {
-                response = (bool)response;
-                Console.WriteLine($"The answer is {response}");
-            }
+                Message = "This message is waiting for an answer!",
+                ReplyRequired = true
+            }, new CancellationTokenSource(TimeSpan.FromSeconds(10)));
+            if (socketMessageResponse != null)
+                Console.WriteLine(socketMessageResponse.Message);
 
             Console.WriteLine();
-            Console.WriteLine("Press enter to send a list of string to Client 2...");
+            Console.Write("4) Press enter to ask a question from Client 2...");
+            Console.ReadLine();
+            bool response = await wsProxyClient.SendAsync<string, bool>("Is it True or False?", new CancellationTokenSource(TimeSpan.FromSeconds(10)));
+            Console.WriteLine($"The answer is {response}");
+
+            Console.WriteLine();
+            Console.Write("5) Press enter to send a list of string to Client 2...");
             Console.ReadLine();
             await wsProxyClient.SendAsync<List<string>>(["Line 1", "Line 2"]);
+            Console.WriteLine("List of strings sent!");
+
+            Console.WriteLine();
+            Console.Write("6) Press enter to send and receive simple text message to Client 2...");
+            Console.ReadLine();
+            string? result = await wsProxyClient.SendAsync<SocketMessage, string>(new() { Message = "Hello", ReplySimpleString = true });
+            Console.WriteLine(result);
 
             Console.ReadLine();
             await wsProxyClient.TryDisconnectAsync();

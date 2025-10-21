@@ -18,6 +18,7 @@ namespace Client2
             {
                 Console.WriteLine("Connected!");
                 Console.WriteLine("Waiting for receiving messages from Client 1...");
+                Console.WriteLine();
             }
             else
             {
@@ -28,18 +29,37 @@ namespace Client2
 
             wsProxyClient.On<SocketMessage>(async (socketMessage) =>
             {
-                Console.WriteLine($"Type message received. Message: {socketMessage.Message}");
+                if (!socketMessage.ReplyRequired && !socketMessage.ReplySimpleString)
+                    Console.WriteLine($"1) Type message received. Message: {socketMessage.Message}");
+
                 if (socketMessage.ReplyRequired)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("3) Sending type message as answer.");
                     await wsProxyClient.ReplyToAsync(socketMessage, new SocketMessage() { Message = "This is my answer from Client 2!" });
+                }
+                if (socketMessage.ReplySimpleString)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("6) Sending simple text answer.");
+                    await wsProxyClient.ReplyToAsync(socketMessage, "Simple text answer from Client 2.");
+                }
             });
-            wsProxyClient.On<byte[]>((data) => Console.WriteLine($"Bytes received. Length: {data.Length}"));
+            wsProxyClient.On<byte[]>((data) =>
+            {
+                Console.WriteLine();
+                Console.WriteLine($"2) Bytes received. Length: {data.Length}");
+            });
             wsProxyClient.On<string>(async (question) =>
             {
-                Console.WriteLine($"{question}");
+                Console.WriteLine();
+                Console.WriteLine($"4) {question}. Sending answer True.");
                 await wsProxyClient.ReplyToAsync(question, true);
             });
             wsProxyClient.On<List<string>>((lines) =>
             {
+                Console.WriteLine();
+                Console.WriteLine("5) List of strings received:");
                 foreach (string line in lines)
                     Console.WriteLine(line);
             });

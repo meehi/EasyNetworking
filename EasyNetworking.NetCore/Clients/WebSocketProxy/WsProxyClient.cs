@@ -1,6 +1,5 @@
 ﻿using EasyNetworking.NetCore.Clients.WebSocketProxy.Models;
 using System.Collections.Concurrent;
-using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
@@ -69,48 +68,50 @@ namespace EasyNetworking.NetCore.Clients.WebSocketProxy
             if (_clientWebSocket == null || _clientWebSocket.State != WebSocketState.Open)
                 return;
 
-            MessageWrapper<T> message = new() { MessageType = typeof(T).FullName, Message = obj };
-            await _clientWebSocket.SendAsync(new(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message))), WebSocketMessageType.Text, true, new CancellationTokenSource().Token);
+            if (typeof(T) != typeof(byte[]))
+            {
+                MessageWrapper<T> message = new() { MessageType = typeof(T).FullName, Message = obj };
+                await _clientWebSocket.SendAsync(new(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message))), WebSocketMessageType.Text, true, new CancellationTokenSource().Token);
+            }
+            else
+            {
+                byte[] bytes = (byte[])Convert.ChangeType(obj, typeof(byte[]))!;
+                await _clientWebSocket.SendAsync(new ArraySegment<byte>(bytes, 0, bytes.Length), WebSocketMessageType.Binary, true, new CancellationTokenSource().Token);
+            }
         }
 
-        public async Task SendAsync(byte[] bytes)
+        public async Task<TResult?> SendAsync<T, TResult>(T obj, CancellationTokenSource? cts = null)
         {
             if (_clientWebSocket == null || _clientWebSocket.State != WebSocketState.Open)
-                return;
-
-            await _clientWebSocket.SendAsync(new ArraySegment<byte>(bytes, 0, bytes.Length), WebSocketMessageType.Binary, true, new CancellationTokenSource().Token);
-        }
-
-        public async Task<object?> SendAsync<T>(T obj, Type answerTypeHint, TimeSpan cancelAfter)
-        {
-            if (_clientWebSocket == null || _clientWebSocket.State != WebSocketState.Open)
-                return null;
-
-            object? result = null;
+                return default;
 
             MessageWrapper<T> message = new() { Id = Guid.NewGuid(), MessageType = typeof(T).FullName, Message = obj };
 
-            CancellationTokenSource cts = new(cancelAfter);
+            if (cts == null)
+                cts = new();
+            TaskCompletionSource<TResult?> tcs = new();
             _replyHandlers.TryAdd(message.Id.Value, new Action<object?>(
                 (param) =>
                 {
-                    if (param != null)
+                    if (param == null)
+                        tcs.SetResult(default);
+                    else
                     {
-                        string? jsonObject = param.ToString();
-                        if (!string.IsNullOrEmpty(jsonObject))
-                            result = Deserialize(jsonObject, answerTypeHint);
+                        object? obj = Deserialize(param.ToString()!, typeof(TResult));
+                        tcs.SetResult((TResult)Convert.ChangeType(obj, typeof(TResult))!);
                     }
-                    cts.Cancel();
                 }));
 
             await _clientWebSocket.SendAsync(new(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message))), WebSocketMessageType.Text, true, new CancellationTokenSource().Token);
 
-            var task = Task.Run(() =>
+            TResult? result = default;
+            try
             {
-                cts.Token.WaitHandle.WaitOne(cancelAfter);
-            }, cts.Token);
-            await task.ConfigureAwait(false);
-            task.Wait();
+                result = await tcs.Task.WaitAsync(cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+            }
 
             _replyHandlers.TryRemove(message.Id.Value, out Delegate? replyCallback);
 
@@ -165,8 +166,7 @@ namespace EasyNetworking.NetCore.Clients.WebSocketProxy
                             else
                             {
                                 MessageWrapper? responseMessage = JsonSerializer.Deserialize<MessageWrapper>(Encoding.UTF8.GetString(buffer[0..offset]));
-                                string? message = responseMessage?.Message?.ToString();
-                                if (responseMessage != null && !string.IsNullOrEmpty(message))
+                                if (responseMessage != null)
                                 {
                                     if (responseMessage.ReplyId != null && _replyHandlers.Any(a => a.Key == responseMessage.ReplyId.Value))
                                     {
@@ -174,17 +174,19 @@ namespace EasyNetworking.NetCore.Clients.WebSocketProxy
                                         if (responseMessage.Message != null)
                                             replyCallback?.DynamicInvoke([responseMessage.Message]);
                                     }
-                                    else if (_handlers.Any(a => a.Key.FullName == responseMessage.MessageType))
+
+                                    if (_handlers.Any(a => a.Key.FullName == responseMessage.MessageType))
                                     {
                                         KeyValuePair<Type, Delegate> handler = _handlers.First(a => a.Key.FullName == responseMessage.MessageType);
-                                        object? receivedMessage = Deserialize(message, handler.Key);
-                                        if (receivedMessage != null)
-                                        {
-                                            if (responseMessage.Id != null)
-                                                _replyToObjects.TryAdd(receivedMessage, responseMessage.Id.Value);
 
-                                            handler.Value.DynamicInvoke([receivedMessage]);
-                                        }
+                                        object? receivedMessage = responseMessage.Message;
+                                        if (receivedMessage != null)
+                                            receivedMessage = Deserialize(receivedMessage.ToString()!, handler.Key);
+
+                                        if (receivedMessage != null && responseMessage.Id != null)
+                                            _replyToObjects.TryAdd(receivedMessage, responseMessage.Id.Value);
+
+                                        handler.Value.DynamicInvoke([receivedMessage]);
                                     }
                                 }
                             }
