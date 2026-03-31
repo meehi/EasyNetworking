@@ -10,11 +10,11 @@ namespace Client2
         {
             Console.WriteLine("Hello, I'm client 2! Please make sure that Server and the other Client is running!");
 
-            Uri uri = new($"{Common.HOST}?groupName={Common.GROUP_NAME}");
+            Uri uri = new($"{EndPoints.WSS_HOST}/ws?groupName={EndPoints.GROUP_NAME}");
 
             WsProxyClient wsProxyClient = new(uri);
-            Console.WriteLine($"Connecting to {Common.HOST} with the following group name: {Common.GROUP_NAME}");
-            if (await wsProxyClient.TryConnectAsync())
+            Console.WriteLine($"Connecting to {uri}");
+            if (await wsProxyClient.ConnectAsync())
             {
                 Console.WriteLine("Connected!");
                 Console.WriteLine("Waiting for receiving messages from Client 1...");
@@ -65,7 +65,7 @@ namespace Client2
             });
 
             Console.ReadLine();
-            await wsProxyClient.TryDisconnectAsync();
+            await wsProxyClient.DisconnectAsync();
         }
     }
 }

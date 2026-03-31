@@ -1,5 +1,6 @@
 ﻿using EasyNetworking.AspNetCore.Servers.MjpegStreamer.Models;
 using Microsoft.AspNetCore.Http;
+using System.Buffers;
 using System.Net.WebSockets;
 
 
@@ -10,65 +11,49 @@ namespace EasyNetworking.AspNetCore.Servers.MjpegStreamer.Extensions
         public static async Task MjpegForwardAsync(this WebSocket webSocket, HttpContext httpContext)
         {
             string? groupName = httpContext.Request.Query["groupName"];
-            if (string.IsNullOrEmpty(httpContext.Connection.Id) || string.IsNullOrEmpty(groupName))
+            if (string.IsNullOrEmpty(groupName) || !Cache.Streamers.TryAdd(groupName, httpContext.Connection.Id))
                 return;
 
-            if (!Cache.Streamers.ContainsKey(groupName))
-                Cache.Streamers.TryAdd(groupName, httpContext.Connection.Id);
-            else
-                return;  //this group already streaming
+            var pool = ArrayPool<byte>.Shared;
+            byte[] buffer = pool.Rent(ushort.MaxValue);
+            int offset = 0;
 
-            var buffer = new byte[ushort.MaxValue];
-            var offset = 0;
-            do
+            try
             {
-                try
+                while (webSocket.State == WebSocketState.Open)
                 {
-                    WebSocketReceiveResult result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer, offset, ushort.MaxValue), CancellationToken.None);
-
+                    var result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer, offset, buffer.Length - offset), CancellationToken.None);
                     offset += result.Count;
+
                     if (!result.EndOfMessage)
-                        Array.Resize(ref buffer, buffer.Length + ushort.MaxValue);
-                    else
                     {
-                        if (webSocket.State == WebSocketState.Open && Cache.Sessions.TryGetValue(groupName, out List<Client>? clients))
-                        {
-                            while (clients.Any(a => a.Context!.RequestAborted.IsCancellationRequested == true))
-                                clients.Remove(clients.First(a => a.Context!.RequestAborted.IsCancellationRequested == true));
-                            if (clients.Count == 0)
-                                Cache.Sessions.TryRemove(groupName, out _);
-
-                            foreach (Client client in clients)
-                            {
-                                if (!client.Response!.HasStarted)
-                                {
-                                    string boundary = "--boundary";
-                                    client.MjpegWriter = new MjpegWriter(client.Response.Body, boundary);
-                                    client.Response.StatusCode = 200;
-                                    client.Response.Headers.ContentType = $"multipart/x-mixed-replace; boundary={boundary}";
-                                }
-
-                                await client.MjpegWriter!.WriteAsync(buffer[0..offset]);
-                            }
-                        }
-
-                        buffer = new byte[ushort.MaxValue];
-                        offset = 0;
+                        var newBuffer = pool.Rent(buffer.Length + ushort.MaxValue);
+                        Buffer.BlockCopy(buffer, 0, newBuffer, 0, offset);
+                        pool.Return(buffer);
+                        buffer = newBuffer;
+                        continue;
                     }
-                }
-                catch
-                {
-                    buffer = new byte[ushort.MaxValue];
+
+                    if (Cache.Sessions.TryGetValue(groupName, out var clients))
+                    {
+                        byte[] frameToSend = new byte[offset];
+                        Buffer.BlockCopy(buffer, 0, frameToSend, 0, offset);
+
+                        foreach (var client in clients)
+                            client.FrameChannel.Writer.TryWrite(frameToSend);
+                    }
+
                     offset = 0;
                 }
-            } while (webSocket.State == WebSocketState.Open);
-
-            Cache.Streamers.TryRemove(groupName, out _);
-
-            if (Cache.Sessions.TryGetValue(groupName, out List<Client>? disconnectClients))
-                foreach (Client client in disconnectClients)
-                    client.StreamingCts!.Cancel();
-            Cache.Sessions.TryRemove(groupName, out _);
+            }
+            finally
+            {
+                pool.Return(buffer);
+                Cache.Streamers.TryRemove(groupName, out _);
+                if (Cache.Sessions.TryRemove(groupName, out var clients))
+                    foreach (var client in clients)
+                        client.FrameChannel.Writer.Complete();
+            }
         }
     }
 }

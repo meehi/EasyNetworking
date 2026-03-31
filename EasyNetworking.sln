@@ -1,15 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.14.36414.22
+# Visual Studio Version 18
+VisualStudioVersion = 18.4.11620.152
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SampleApp", "SampleApp", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client1", "SampleApp\Client1\Client1.csproj", "{B5C4C67D-DAA6-CEE4-0AEB-BD4954F9F2C1}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client2", "SampleApp\Client2\Client2.csproj", "{8E6F7C99-9833-B493-A213-760EDA14E4A4}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server", "SampleApp\Server\Server.csproj", "{38B2B92C-1B59-83BF-6804-2EF29ECB40D3}"
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "SharedData", "SampleApp\SharedData\SharedData.shproj", "{4D7EC18C-98C4-4613-9A57-4FB54D3135A2}"
 EndProject
@@ -17,24 +11,26 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EasyNetworking.AspNetCore",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EasyNetworking.NetCore", "EasyNetworking.NetCore\EasyNetworking.NetCore.csproj", "{22E7F947-9B97-4E17-AAD2-33060C7D534C}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WebSocketSample", "WebSocketSample", "{16454956-3E3C-4A16-B1E4-50FA74E84F82}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MjpegStreamerSample", "MjpegStreamerSample", "{FA10C0BC-0373-4925-85A0-D140DB0EED18}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Middleware", "Middleware", "{2ED96817-68F2-4ADE-8AE3-57763E98B7B7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MjpegStreamerClient", "SampleApp\MjpegStreamerSample\MjpegStreamerClient\MjpegStreamerClient.csproj", "{EA5DC174-533C-FDF5-6FA2-67FC19A92442}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client1", "SampleApp\WebSocketSample\Client1\Client1.csproj", "{87F165DA-A16E-886C-D713-CDA9B688D1CC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client2", "SampleApp\WebSocketSample\Client2\Client2.csproj", "{6DCF1696-B6C2-CB9D-F63D-AF3B7249FF0C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server", "SampleApp\Middleware\Server\Server.csproj", "{3BEC83E5-1DFE-1010-9957-6825DF0A2CE3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{B5C4C67D-DAA6-CEE4-0AEB-BD4954F9F2C1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B5C4C67D-DAA6-CEE4-0AEB-BD4954F9F2C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B5C4C67D-DAA6-CEE4-0AEB-BD4954F9F2C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B5C4C67D-DAA6-CEE4-0AEB-BD4954F9F2C1}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8E6F7C99-9833-B493-A213-760EDA14E4A4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8E6F7C99-9833-B493-A213-760EDA14E4A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8E6F7C99-9833-B493-A213-760EDA14E4A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8E6F7C99-9833-B493-A213-760EDA14E4A4}.Release|Any CPU.Build.0 = Release|Any CPU
-		{38B2B92C-1B59-83BF-6804-2EF29ECB40D3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{38B2B92C-1B59-83BF-6804-2EF29ECB40D3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{38B2B92C-1B59-83BF-6804-2EF29ECB40D3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{38B2B92C-1B59-83BF-6804-2EF29ECB40D3}.Release|Any CPU.Build.0 = Release|Any CPU
 		{BC057605-021C-CBA0-861A-BC3F4B2ACC09}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{BC057605-021C-CBA0-861A-BC3F4B2ACC09}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BC057605-021C-CBA0-861A-BC3F4B2ACC09}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -43,22 +39,44 @@ Global
 		{22E7F947-9B97-4E17-AAD2-33060C7D534C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{22E7F947-9B97-4E17-AAD2-33060C7D534C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{22E7F947-9B97-4E17-AAD2-33060C7D534C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EA5DC174-533C-FDF5-6FA2-67FC19A92442}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EA5DC174-533C-FDF5-6FA2-67FC19A92442}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EA5DC174-533C-FDF5-6FA2-67FC19A92442}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EA5DC174-533C-FDF5-6FA2-67FC19A92442}.Release|Any CPU.Build.0 = Release|Any CPU
+		{87F165DA-A16E-886C-D713-CDA9B688D1CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{87F165DA-A16E-886C-D713-CDA9B688D1CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{87F165DA-A16E-886C-D713-CDA9B688D1CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{87F165DA-A16E-886C-D713-CDA9B688D1CC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6DCF1696-B6C2-CB9D-F63D-AF3B7249FF0C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6DCF1696-B6C2-CB9D-F63D-AF3B7249FF0C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6DCF1696-B6C2-CB9D-F63D-AF3B7249FF0C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6DCF1696-B6C2-CB9D-F63D-AF3B7249FF0C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3BEC83E5-1DFE-1010-9957-6825DF0A2CE3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3BEC83E5-1DFE-1010-9957-6825DF0A2CE3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3BEC83E5-1DFE-1010-9957-6825DF0A2CE3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3BEC83E5-1DFE-1010-9957-6825DF0A2CE3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{B5C4C67D-DAA6-CEE4-0AEB-BD4954F9F2C1} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
-		{8E6F7C99-9833-B493-A213-760EDA14E4A4} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
-		{38B2B92C-1B59-83BF-6804-2EF29ECB40D3} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{4D7EC18C-98C4-4613-9A57-4FB54D3135A2} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{16454956-3E3C-4A16-B1E4-50FA74E84F82} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{FA10C0BC-0373-4925-85A0-D140DB0EED18} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{2ED96817-68F2-4ADE-8AE3-57763E98B7B7} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{EA5DC174-533C-FDF5-6FA2-67FC19A92442} = {FA10C0BC-0373-4925-85A0-D140DB0EED18}
+		{87F165DA-A16E-886C-D713-CDA9B688D1CC} = {16454956-3E3C-4A16-B1E4-50FA74E84F82}
+		{6DCF1696-B6C2-CB9D-F63D-AF3B7249FF0C} = {16454956-3E3C-4A16-B1E4-50FA74E84F82}
+		{3BEC83E5-1DFE-1010-9957-6825DF0A2CE3} = {2ED96817-68F2-4ADE-8AE3-57763E98B7B7}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DFFE4714-E3E8-472C-8475-4A1EE414C97C}
 	EndGlobalSection
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		SampleApp\SharedData\SharedData.projitems*{3bec83e5-1dfe-1010-9957-6825df0a2ce3}*SharedItemsImports = 5
 		SampleApp\SharedData\SharedData.projitems*{4d7ec18c-98c4-4613-9a57-4fb54d3135a2}*SharedItemsImports = 13
-		SampleApp\SharedData\SharedData.projitems*{8e6f7c99-9833-b493-a213-760eda14e4a4}*SharedItemsImports = 5
-		SampleApp\SharedData\SharedData.projitems*{b5c4c67d-daa6-cee4-0aeb-bd4954f9f2c1}*SharedItemsImports = 5
+		SampleApp\SharedData\SharedData.projitems*{6dcf1696-b6c2-cb9d-f63d-af3b7249ff0c}*SharedItemsImports = 5
+		SampleApp\SharedData\SharedData.projitems*{87f165da-a16e-886c-d713-cda9b688d1cc}*SharedItemsImports = 5
+		SampleApp\SharedData\SharedData.projitems*{ea5dc174-533c-fdf5-6fa2-67fc19a92442}*SharedItemsImports = 5
 	EndGlobalSection
 EndGlobal

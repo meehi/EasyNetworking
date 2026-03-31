@@ -4,44 +4,49 @@ namespace EasyNetworking.NetCore.Clients.MjpegStreamer
 {
     public abstract class Streamer
     {
-        #region Private variables
         private WsProxyClient? _wsProxyClient;
         private CancellationTokenSource? _streamCts;
-        #endregion
+        private readonly SemaphoreSlim _frameReady = new(0);
+        private byte[]? _mjpegBuffer;
 
-        #region Properties
-        public bool HasNewFrame;
-        public byte[]? MjpegBuffer;
-        #endregion
-
-        #region Public methods
         public void InitStreamer(Uri streamEndPoint)
         {
             _streamCts = new();
-
             Task.Run(async () =>
             {
-                _wsProxyClient = new(streamEndPoint);
-                if (await _wsProxyClient.TryConnectAsync())
+                _wsProxyClient = new WsProxyClient(streamEndPoint);
+                if (await _wsProxyClient.ConnectAsync())
                 {
-                    while (!_streamCts.IsCancellationRequested)
+                    try
                     {
-                        if (HasNewFrame)
+                        while (!_streamCts.IsCancellationRequested)
                         {
-                            await _wsProxyClient.SendAsync(MjpegBuffer!);
-                            HasNewFrame = false;
+                            await _frameReady.WaitAsync(_streamCts.Token);
+
+                            if (_mjpegBuffer != null)
+                            {
+                                await _wsProxyClient.SendAsync(_mjpegBuffer);
+                            }
                         }
-                        Thread.Sleep(10);
+                    }
+                    catch (OperationCanceledException)
+                    {
                     }
                 }
             });
         }
 
+        protected void SetNewFrame(byte[] buffer)
+        {
+            _mjpegBuffer = buffer;
+            if (_frameReady.CurrentCount == 0)
+                _frameReady.Release();
+        }
+
         public void Close()
         {
             _streamCts?.Cancel();
-            _wsProxyClient?.TryDisconnectAsync();
+            _wsProxyClient?.DisconnectAsync();
         }
-        #endregion
     }
 }

@@ -2,42 +2,18 @@
 
 namespace EasyNetworking.AspNetCore.Servers.MjpegStreamer.Models
 {
-    internal class MjpegWriter(Stream stream, string boundary) : IDisposable
+    internal class MjpegWriter(Stream stream, string boundary = "--boundary")
     {
-        public MjpegWriter(Stream stream) : this(stream, "--boundary") { }
+        private readonly Stream _stream = stream;
+        private readonly string _boundary = boundary;
 
-        public string Boundary { get; private set; } = boundary;
-        public Stream? Stream { get; private set; } = stream;
-
-        public async Task WriteAsync(byte[] imageBytes)
+        public async Task WriteFrameAsync(byte[] frame, CancellationToken ct)
         {
-            if (Stream == null)
-                return;
+            string header = $"\r\n{_boundary}\r\nContent-Type: image/jpeg\r\nContent-Length: {frame.Length}\r\n\r\n";
 
-            string header =
-               $"{Boundary}\r\n" +
-               $"Content-Type: image/jpeg\r\n" +
-               $"Content-Length: {imageBytes.Length}\r\n\r\n";
-
-            await Stream.WriteAsync(Encoding.ASCII.GetBytes(header));
-
-            await Stream.WriteAsync(imageBytes);
-
-            await Stream.WriteAsync(Encoding.ASCII.GetBytes("\r\n"));
-
-            await Stream.FlushAsync();
-        }
-
-        public void Dispose()
-        {
-            try
-            {
-                Stream?.Dispose();
-            }
-            finally
-            {
-                Stream = null;
-            }
+            await _stream.WriteAsync(Encoding.ASCII.GetBytes(header), ct);
+            await _stream.WriteAsync(frame, ct);
+            await _stream.FlushAsync(ct);
         }
     }
 }

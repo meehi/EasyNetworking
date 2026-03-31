@@ -12,32 +12,23 @@ namespace EasyNetworking.NetCore.Clients.WebSocketProxy
         private readonly Uri _host = host;
         private ClientWebSocket? _clientWebSocket;
         private bool _disconnectRequested;
+        private TimeSpan? _reconnectInterval;
+
         private readonly ConcurrentDictionary<Type, Delegate> _handlers = new();
         private readonly ConcurrentDictionary<Guid, Delegate> _replyHandlers = new();
         private readonly ConcurrentDictionary<object, Guid> _replyToObjects = new();
         #endregion
 
         #region Public methods
-        public async Task<bool> TryConnectAsync()
+        public async Task<bool> ConnectAsync(TimeSpan? withReconnect = null)
         {
+            if (withReconnect.HasValue)
+                _reconnectInterval = withReconnect;
             _disconnectRequested = false;
-            _clientWebSocket = new();
-            bool connected = false;
-            try
-            {
-                await _clientWebSocket.ConnectAsync(_host, CancellationToken.None);
-                connected = true;
-            }
-            catch
-            {
-            }
-            if (connected)
-                StartReceiveMessages();
-
-            return connected;
+            return await ConnectWithReconnectAsync();
         }
 
-        public async Task TryDisconnectAsync()
+        public async Task DisconnectAsync()
         {
             _disconnectRequested = true;
             if (_clientWebSocket == null || _clientWebSocket.State != WebSocketState.Open)
@@ -50,194 +41,176 @@ namespace EasyNetworking.NetCore.Clients.WebSocketProxy
             catch
             {
             }
+            finally
+            {
+                _clientWebSocket.Dispose();
+            }
         }
 
-        public bool IsConnected()
-        {
-            return _clientWebSocket?.State == WebSocketState.Open;
-        }
+        public bool IsConnected() => _clientWebSocket?.State == WebSocketState.Open;
 
-        public void On<T>(Action<T> callback)
-        {
-            if (!_handlers.ContainsKey(typeof(T)))
-                _handlers.TryAdd(typeof(T), callback);
-        }
+        public void On<T>(Action<T> callback) => _handlers.TryAdd(typeof(T), callback);
 
         public async Task SendAsync<T>(T obj)
         {
-            if (_clientWebSocket == null || _clientWebSocket.State != WebSocketState.Open)
+            if (!IsConnected())
                 return;
 
-            if (typeof(T) != typeof(byte[]))
+            if (obj is byte[] bytes)
             {
-                MessageWrapper<T> message = new() { MessageType = typeof(T).FullName, Message = obj };
-                await _clientWebSocket.SendAsync(new(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message))), WebSocketMessageType.Text, true, new CancellationTokenSource().Token);
+                await _clientWebSocket!.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Binary, true, CancellationToken.None);
+                return;
             }
-            else
-            {
-                byte[] bytes = (byte[])Convert.ChangeType(obj, typeof(byte[]))!;
-                await _clientWebSocket.SendAsync(new ArraySegment<byte>(bytes, 0, bytes.Length), WebSocketMessageType.Binary, true, new CancellationTokenSource().Token);
-            }
+
+            MessageWrapper wrapper = new() { Id = Guid.NewGuid(), MessageType = typeof(T).FullName, Message = obj };
+            byte[] payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(wrapper));
+            await _clientWebSocket!.SendAsync(new ArraySegment<byte>(payload, 0, payload.Length), WebSocketMessageType.Text, true, CancellationToken.None);
         }
 
         public async Task<TResult?> SendAsync<T, TResult>(T obj, CancellationTokenSource? cts = null)
         {
-            if (_clientWebSocket == null || _clientWebSocket.State != WebSocketState.Open)
+            if (!IsConnected())
                 return default;
 
-            MessageWrapper<T> message = new() { Id = Guid.NewGuid(), MessageType = typeof(T).FullName, Message = obj };
+            MessageWrapper wrapper = new() { Id = Guid.NewGuid(), MessageType = typeof(T).FullName, Message = obj };
+            cts ??= new();
+            var tcs = new TaskCompletionSource<TResult?>();
 
-            if (cts == null)
-                cts = new();
-            TaskCompletionSource<TResult?> tcs = new();
-            _replyHandlers.TryAdd(message.Id.Value, new Action<object?>(
-                (param) =>
-                {
-                    if (param == null)
-                        tcs.SetResult(default);
-                    else
-                    {
-                        object? obj = Deserialize(param.ToString()!, typeof(TResult));
-                        tcs.SetResult((TResult)Convert.ChangeType(obj, typeof(TResult))!);
-                    }
-                }));
+            _replyHandlers.TryAdd(wrapper.Id.Value, new Action<object?>(param =>
+            {
+                var result = Deserialize(param, typeof(TResult));
+                tcs.TrySetResult((TResult?)result);
+            }));
 
-            await _clientWebSocket.SendAsync(new(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message))), WebSocketMessageType.Text, true, new CancellationTokenSource().Token);
+            byte[] payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(wrapper));
+            await _clientWebSocket!.SendAsync(new ArraySegment<byte>(payload, 0, payload.Length), WebSocketMessageType.Text, true, CancellationToken.None);
 
-            TResult? result = default;
             try
             {
-                result = await tcs.Task.WaitAsync(cts.Token);
+                return await tcs.Task.WaitAsync(cts.Token);
             }
-            catch (OperationCanceledException)
+            catch
             {
+                return default;
             }
-
-            _replyHandlers.TryRemove(message.Id.Value, out Delegate? replyCallback);
-
-            return result;
+            finally
+            {
+                _replyHandlers.TryRemove(wrapper.Id.Value, out _);
+            }
         }
 
         public async Task ReplyToAsync<T>(object replyToObject, T answer)
         {
-            if (_clientWebSocket == null || _clientWebSocket.State != WebSocketState.Open)
-                return;
-            if (!_replyToObjects.Any(a => a.Key == replyToObject))
+            if (!IsConnected() || !_replyToObjects.TryRemove(replyToObject, out Guid replyId))
                 return;
 
-            _replyToObjects.TryRemove(replyToObject, out Guid replyID);
-
-            MessageWrapper<T> message = new() { MessageType = typeof(T).FullName, Message = answer, ReplyId = replyID };
-
-            await _clientWebSocket.SendAsync(new(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message))), WebSocketMessageType.Text, true, new CancellationTokenSource().Token);
+            MessageWrapper wrapper = new() { MessageType = typeof(T).FullName, Message = answer, ReplyId = replyId };
+            byte[] payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(wrapper));
+            await _clientWebSocket!.SendAsync(new ArraySegment<byte>(payload, 0, payload.Length), WebSocketMessageType.Text, true, CancellationToken.None);
         }
         #endregion
 
         #region Private methods
-        private void StartReceiveMessages()
+        private async Task<bool> ConnectWithReconnectAsync()
         {
-            if (_clientWebSocket == null)
-                return;
-
-            new Task(async () =>
+            _clientWebSocket?.Dispose();
+            _clientWebSocket = new();
+            try
             {
-                CancellationTokenSource cts = new();
-                var buffer = new byte[ushort.MaxValue];
-                var offset = 0;
-                while (!cts.IsCancellationRequested)
-                {
-                    try
-                    {
-                        WebSocketReceiveResult result = await _clientWebSocket.ReceiveAsync(new ArraySegment<byte>(buffer, offset, ushort.MaxValue), cts.Token);
-
-                        offset += result.Count;
-                        if (!result.EndOfMessage)
-                            Array.Resize(ref buffer, buffer.Length + ushort.MaxValue);
-                        else
-                        {
-                            if (result.MessageType == WebSocketMessageType.Binary)
-                            {
-                                if (_handlers.Any(a => a.Key.FullName == typeof(byte[]).FullName))
-                                {
-                                    KeyValuePair<Type, Delegate> handler = _handlers.First(a => a.Key.FullName == typeof(byte[]).FullName);
-                                    handler.Value.DynamicInvoke([buffer[0..offset]]);
-                                }
-                            }
-                            else
-                            {
-                                MessageWrapper? responseMessage = JsonSerializer.Deserialize<MessageWrapper>(Encoding.UTF8.GetString(buffer[0..offset]));
-                                if (responseMessage != null)
-                                {
-                                    if (responseMessage.ReplyId != null && _replyHandlers.Any(a => a.Key == responseMessage.ReplyId.Value))
-                                    {
-                                        _replyHandlers.TryRemove(responseMessage.ReplyId.Value, out Delegate? replyCallback);
-                                        if (responseMessage.Message != null)
-                                            replyCallback?.DynamicInvoke([responseMessage.Message]);
-                                    }
-
-                                    if (_handlers.Any(a => a.Key.FullName == responseMessage.MessageType))
-                                    {
-                                        KeyValuePair<Type, Delegate> handler = _handlers.First(a => a.Key.FullName == responseMessage.MessageType);
-
-                                        object? receivedMessage = responseMessage.Message;
-                                        if (receivedMessage != null)
-                                            receivedMessage = Deserialize(receivedMessage.ToString()!, handler.Key);
-
-                                        if (receivedMessage != null && responseMessage.Id != null)
-                                            _replyToObjects.TryAdd(receivedMessage, responseMessage.Id.Value);
-
-                                        handler.Value.DynamicInvoke([receivedMessage]);
-                                    }
-                                }
-                            }
-
-                            buffer = new byte[ushort.MaxValue];
-                            offset = 0;
-                        }
-                    }
-                    catch
-                    {
-                        cts.Cancel();
-                    }
-                }
-
-                if (!_disconnectRequested)
-                    await TryConnectAsync();
-            }).Start();
+                await _clientWebSocket.ConnectAsync(_host, CancellationToken.None);
+                StartReceiveMessages();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                HandleReconnect();
+                return false;
+            }
         }
 
-        private static object? Deserialize(string message, Type type)
+        private void HandleReconnect()
         {
-            if (type == typeof(bool))
-                return Convert.ToBoolean(message);
-            if (type == typeof(byte))
-                return Convert.ToByte(message);
-            if (type == typeof(char))
-                return Convert.ToChar(message);
-            if (type == typeof(DateTime))
-                return Convert.ToDateTime(message);
-            if (type == typeof(decimal))
-                return Convert.ToDecimal(message);
-            if (type == typeof(double))
-                return Convert.ToDouble(message);
-            if (type == typeof(float))
-                return Convert.ToSingle(message);
-            if (type == typeof(int) || type == typeof(int))
-                return Convert.ToInt32(message);
-            if (type == typeof(short))
-                return Convert.ToInt16(message);
-            if (type == typeof(long))
-                return Convert.ToInt64(message);
-            if (type == typeof(uint) || type == typeof(uint))
-                return Convert.ToUInt32(message);
-            if (type == typeof(ushort))
-                return Convert.ToUInt16(message);
-            if (type == typeof(ulong))
-                return Convert.ToUInt64(message);
-            if (type == typeof(string))
-                return Convert.ToString(message);
+            if (!_disconnectRequested && _reconnectInterval.HasValue)
+                _ = Task.Delay(_reconnectInterval.Value).ContinueWith(_ => ConnectAsync());
+        }
 
-            return JsonSerializer.Deserialize(message, type);
+        private void StartReceiveMessages()
+        {
+            Task.Run(async () =>
+            {
+                var buffer = new byte[ushort.MaxValue];
+                var offset = 0;
+                try
+                {
+                    while (IsConnected())
+                    {
+                        var result = await _clientWebSocket!.ReceiveAsync(new ArraySegment<byte>(buffer, offset, buffer.Length - offset), CancellationToken.None);
+                        offset += result.Count;
+
+                        if (!result.EndOfMessage)
+                        {
+                            Array.Resize(ref buffer, buffer.Length + ushort.MaxValue);
+                            continue;
+                        }
+
+                        ProcessMessage(buffer, offset, result.MessageType);
+
+                        buffer = new byte[ushort.MaxValue];
+                        offset = 0;
+                    }
+                }
+                catch
+                {
+                }
+
+                HandleReconnect();
+            });
+        }
+
+
+        private void ProcessMessage(byte[] buffer, int length, WebSocketMessageType type)
+        {
+            if (type == WebSocketMessageType.Binary)
+            {
+                if (_handlers.TryGetValue(typeof(byte[]), out var handler))
+                    handler.DynamicInvoke([buffer[0..length]]);
+                return;
+            }
+
+            var response = JsonSerializer.Deserialize<MessageWrapper>(buffer[0..length]);
+            if (response == null)
+                return;
+
+            if (response.ReplyId.HasValue && _replyHandlers.TryRemove(response.ReplyId.Value, out var replyCb))
+            {
+                var targetType = replyCb.Method.GetParameters().FirstOrDefault()?.ParameterType;
+                if (targetType != null)
+                    replyCb.DynamicInvoke([Deserialize(response.Message, targetType)]);
+                return;
+            }
+
+            var handlerEntry = _handlers.FirstOrDefault(h => h.Key.FullName == response.MessageType);
+            if (handlerEntry.Value != null)
+            {
+                var finalMsg = Deserialize(response.Message, handlerEntry.Key);
+                if (finalMsg != null)
+                {
+                    if (response.Id.HasValue)
+                        _replyToObjects.TryAdd(finalMsg, response.Id.Value);
+                    handlerEntry.Value.DynamicInvoke([finalMsg]);
+                }
+            }
+        }
+
+        private static object? Deserialize(object? message, Type type)
+        {
+            if (message == null)
+                return null;
+            if (message is JsonElement element)
+                return element.Deserialize(type);
+            if (type.IsInstanceOfType(message))
+                return message;
+            return JsonSerializer.Deserialize(message.ToString()!, type);
         }
         #endregion
     }

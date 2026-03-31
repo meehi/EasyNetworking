@@ -4,7 +4,7 @@ namespace EasyNetworking.AspNetCore.Servers.MjpegStreamer.Models
 {
     internal static class Cache
     {
-        public static ConcurrentDictionary<string, string> Streamers = new();
-        public static ConcurrentDictionary<string, List<Client>> Sessions = new();
+        public static readonly ConcurrentDictionary<string, string> Streamers = new();
+        public static readonly ConcurrentDictionary<string, ConcurrentBag<Client>> Sessions = new();
     }
 }

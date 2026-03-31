@@ -13,11 +13,11 @@ namespace Client1
             Console.WriteLine("Press enter to continue...");
             Console.ReadLine();
 
-            Uri uri = new($"{Common.HOST}?groupName={Common.GROUP_NAME}");
+            Uri uri = new($"{EndPoints.WSS_HOST}/{EndPoints.WS_POSTFIX}?groupName={EndPoints.GROUP_NAME}");
 
             WsProxyClient wsProxyClient = new(uri);
-            Console.WriteLine($"Connecting to {Common.HOST} with the following group name: {Common.GROUP_NAME}");
-            if (await wsProxyClient.TryConnectAsync())
+            Console.WriteLine($"Connecting to {uri}");
+            if (await wsProxyClient.ConnectAsync())
                 Console.WriteLine("Connected!");
             else
             {
@@ -69,7 +69,7 @@ namespace Client1
             Console.WriteLine(result);
 
             Console.ReadLine();
-            await wsProxyClient.TryDisconnectAsync();
+            await wsProxyClient.DisconnectAsync();
         }
     }
 }

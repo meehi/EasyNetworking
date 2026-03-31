@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using System.Collections.Concurrent;
 using System.Net.WebSockets;
 
 namespace EasyNetworking.AspNetCore.Servers.MjpegStreamer.Extensions
@@ -10,45 +11,51 @@ namespace EasyNetworking.AspNetCore.Servers.MjpegStreamer.Extensions
     {
         public static void UseMjpegStreamer(this IEndpointRouteBuilder app, string streamEndPoint, string liveStreamEndPoint)
         {
-            app.MapGet(streamEndPoint,
-                async (HttpRequest request, HttpResponse response) =>
+            app.MapGet(streamEndPoint, async (HttpContext context) =>
+            {
+                if (context.WebSockets.IsWebSocketRequest)
                 {
-                    if (request.HttpContext.WebSockets.IsWebSocketRequest)
+                    using WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync();
+                    await webSocket.MjpegForwardAsync(context);
+                }
+                else
+                    context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            });
+
+            app.MapGet(liveStreamEndPoint, async (HttpContext context) =>
+            {
+                string? groupName = context.Request.Query["groupName"];
+                if (string.IsNullOrEmpty(groupName) || !Cache.Streamers.ContainsKey(groupName))
+                    return;
+
+                Client client = new(context.Connection.Id, context);
+
+                var sessions = Cache.Sessions.GetOrAdd(groupName, _ => new ConcurrentBag<Client>());
+                sessions.Add(client);
+
+                context.Response.ContentType = "multipart/x-mixed-replace; boundary=--boundary";
+                context.Response.StatusCode = 200;
+
+                MjpegWriter writer = new(context.Response.Body);
+
+                try
+                {
+                    await foreach (var frame in client.FrameChannel.Reader.ReadAllAsync(context.RequestAborted))
                     {
-                        using WebSocket webSocket = await request.HttpContext.WebSockets.AcceptWebSocketAsync();
-                        await webSocket.MjpegForwardAsync(request.HttpContext);
+                        await writer.WriteFrameAsync(frame, context.RequestAborted);
                     }
-                    else
-                        request.HttpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
-                });
-
-            app.MapGet(liveStreamEndPoint,
-                (HttpRequest request, HttpResponse response) =>
+                }
+                catch (OperationCanceledException)
                 {
-                    string? groupName = request.Query["groupName"];
-                    if (string.IsNullOrEmpty(request.HttpContext.Connection.Id) || string.IsNullOrEmpty(groupName))
-                        return;
-
-                    if (!Cache.Streamers.ContainsKey(groupName))  //not streaming
-                        return;
-
-                    CancellationTokenSource cts = new();
-                    Client currentClient = new()
+                }
+                finally
+                {
+                    if (Cache.Sessions.TryGetValue(groupName, out var clients))
                     {
-                        Id = request.HttpContext.Connection.Id,
-                        Context = request.HttpContext,
-                        Response = request.HttpContext.Response,
-                        StreamingCts = new()
-                    };
-
-                    if (!Cache.Sessions.TryGetValue(groupName, out List<Client>? clients))
-                        Cache.Sessions.TryAdd(groupName, [currentClient]);
-                    else
-                        if (!clients.Any(a => a.Id == request.HttpContext.Connection.Id))
-                        clients.Add(currentClient);
-
-                    currentClient.StreamingCts.Token.WaitHandle.WaitOne();
-                });
+                        Cache.Sessions[groupName] = new ConcurrentBag<Client>(clients.Where(c => c.Id != client.Id));
+                    }
+                }
+            });
         }
     }
 }

@@ -1,13 +1,15 @@
 ﻿using Microsoft.AspNetCore.Http;
+using System.Threading.Channels;
 
 namespace EasyNetworking.AspNetCore.Servers.MjpegStreamer.Models
 {
-    internal class Client
+    internal class Client(string id, HttpContext context)
     {
-        public string? Id { get; set; }
-        public MjpegWriter? MjpegWriter { get; set; }
-        public HttpContext? Context { get; set; }
-        public HttpResponse? Response { get; set; }
-        public CancellationTokenSource? StreamingCts { get; set; }
+        public string Id { get; } = id;
+        public HttpContext Context { get; } = context;
+        public Channel<byte[]> FrameChannel { get; } = Channel.CreateBounded<byte[]>(new BoundedChannelOptions(1)
+        {
+            FullMode = BoundedChannelFullMode.DropOldest
+        });
     }
 }

@@ -9,7 +9,8 @@
     <Import_RootNamespace>SharedData</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)Models\Common.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Models\EndPoints.cs" />
+    <Compile Include="..\..\SharedData\Models\EndPoints.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Models\SocketMessage.cs" />
   </ItemGroup>
 </Project>
