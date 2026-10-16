@@ -1,7 +1,6 @@
 ﻿using EasyNetworking.NetCore.Clients.MjpegStreamer;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
-using Emgu.CV.Structure;
 using Emgu.CV.Util;
 using SharedData.Models;
 
@@ -11,7 +10,7 @@ namespace MjpegStreamerClient
     {
         private VideoCapture? _capture;
         private readonly VectorOfByte _compressionBuffer = new();
-        private Image<Bgr, byte>? _frameBuffer;
+        private Mat? _frameBuffer;
         private KeyValuePair<ImwriteFlags, int>[]? _compressionParams;
         private DateTime _lastFrameTime = DateTime.MinValue;
         private readonly TimeSpan _frameInterval = TimeSpan.FromMilliseconds(40); // ~25 FPS
@@ -19,7 +18,7 @@ namespace MjpegStreamerClient
         public void Start(Uri uri, int camIndex = 0, int quality = 80)
         {
             _compressionParams = [new(ImwriteFlags.JpegQuality, quality)];
-            _frameBuffer = new Image<Bgr, byte>(1280, 720);
+            _frameBuffer = new Mat();
 
             InitStreamer(uri);
 

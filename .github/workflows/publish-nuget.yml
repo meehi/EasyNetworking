@@ -1,0 +1,178 @@
+name: Publish NuGet Packages
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'EasyNetworking.AspNetCore/**'
+      - 'EasyNetworking.NetCore/**'
+      - '.github/workflows/publish-nuget.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-nuget
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Detect changed projects
+        id: changes
+        shell: bash
+        env:
+          BEFORE: ${{ github.event.before }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          NETCORE=false
+          ASPNETCORE=false
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]] || [[ "$BEFORE" =~ ^0+$ ]]; then
+            NETCORE=true
+            ASPNETCORE=true
+          else
+            CHANGED_FILES="$(git diff --name-only "$BEFORE" "$GITHUB_SHA")"
+
+            if grep -q '^EasyNetworking.NetCore/' <<< "$CHANGED_FILES"; then
+              NETCORE=true
+              ASPNETCORE=true
+            fi
+
+            if grep -q '^EasyNetworking.AspNetCore/' <<< "$CHANGED_FILES"; then
+              ASPNETCORE=true
+            fi
+
+            if grep -q '^\.github/workflows/publish-nuget\.yml$' <<< "$CHANGED_FILES"; then
+              NETCORE=true
+              ASPNETCORE=true
+            fi
+          fi
+
+          echo "netcore=$NETCORE" >> "$GITHUB_OUTPUT"
+          echo "aspnetcore=$ASPNETCORE" >> "$GITHUB_OUTPUT"
+
+          echo "EasyNetworking.NetCore: $NETCORE"
+          echo "EasyNetworking.AspNetCore: $ASPNETCORE"
+
+      - name: Increment package versions
+        shell: bash
+        env:
+          NETCORE_CHANGED: ${{ steps.changes.outputs.netcore }}
+          ASPNETCORE_CHANGED: ${{ steps.changes.outputs.aspnetcore }}
+        run: |
+          bump_version() {
+            local project_file="$1"
+
+            python3 - "$project_file" <<'PY'
+          import re
+          import sys
+          from pathlib import Path
+
+          path = Path(sys.argv[1])
+          content = path.read_text(encoding="utf-8")
+
+          pattern = re.compile(
+              r'(<Version>\s*)(\d+)\.(\d+)\.(\d+)(\s*</Version>)'
+          )
+
+          def increment(match):
+              major = int(match.group(2))
+              minor = int(match.group(3))
+              patch = int(match.group(4)) + 1
+
+              new_version = f"{major}.{minor}.{patch}"
+              print(f"{path}: {match.group(2)}{match.group(3)}.{match.group(4)} -> {new_version}")
+
+              return f"{match.group(1)}{new_version}{match.group(5)}"
+
+          updated, count = pattern.subn(increment, content, count=1)
+
+          if count != 1:
+              raise SystemExit(
+                  f"Could not find a numeric <Version>major.minor.patch</Version> in {path}"
+              )
+
+          path.write_text(updated, encoding="utf-8")
+          PY
+          }
+
+          if [[ "$NETCORE_CHANGED" == "true" ]]; then
+            bump_version "EasyNetworking.NetCore/EasyNetworking.NetCore.csproj"
+          fi
+
+          if [[ "$ASPNETCORE_CHANGED" == "true" ]]; then
+            bump_version "EasyNetworking.AspNetCore/EasyNetworking.AspNetCore.csproj"
+          fi
+
+      - name: Commit updated versions
+        shell: bash
+        env:
+          NETCORE_CHANGED: ${{ steps.changes.outputs.netcore }}
+          ASPNETCORE_CHANGED: ${{ steps.changes.outputs.aspnetcore }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if [[ "$NETCORE_CHANGED" == "true" ]]; then
+            git add EasyNetworking.NetCore/EasyNetworking.NetCore.csproj
+          fi
+
+          if [[ "$ASPNETCORE_CHANGED" == "true" ]]; then
+            git add EasyNetworking.AspNetCore/EasyNetworking.AspNetCore.csproj
+          fi
+
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: increment NuGet package versions [skip ci]"
+            git push
+          fi
+
+      - name: Pack EasyNetworking.NetCore
+        if: steps.changes.outputs.netcore == 'true'
+        run: |
+          dotnet pack \
+            EasyNetworking.NetCore/EasyNetworking.NetCore.csproj \
+            --configuration Release \
+            --output ./artifacts
+
+      - name: Pack EasyNetworking.AspNetCore
+        if: steps.changes.outputs.aspnetcore == 'true'
+        run: |
+          dotnet pack \
+            EasyNetworking.AspNetCore/EasyNetworking.AspNetCore.csproj \
+            --configuration Release \
+            --output ./artifacts
+
+      - name: Publish packages to NuGet.org
+        shell: bash
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          shopt -s nullglob
+          packages=(./artifacts/*.nupkg)
+
+          if [[ ${#packages[@]} -eq 0 ]]; then
+            echo "No NuGet packages were generated."
+            exit 1
+          fi
+
+          for package in "${packages[@]}"; do
+            dotnet nuget push "$package" \
+              --api-key "$NUGET_API_KEY" \
+              --source "https://api.nuget.org/v3/index.json" \
+              --skip-duplicate
+          done

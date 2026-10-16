@@ -8,6 +8,11 @@ namespace EasyNetworking.NetCore.Clients.WebSocketProxy
 {
     public class WsProxyClient(Uri host)
     {
+        #region Events
+        public event Action? OnConnected;
+        public event Action? OnDisconnected;
+        #endregion
+
         #region Private variables
         private readonly Uri _host = host;
         private ClientWebSocket? _clientWebSocket;
@@ -118,10 +123,13 @@ namespace EasyNetworking.NetCore.Clients.WebSocketProxy
             try
             {
                 await _clientWebSocket.ConnectAsync(_host, CancellationToken.None);
+
+                OnConnected?.Invoke();
+
                 StartReceiveMessages();
                 return true;
             }
-            catch (Exception ex)
+            catch
             {
                 HandleReconnect();
                 return false;
@@ -163,6 +171,7 @@ namespace EasyNetworking.NetCore.Clients.WebSocketProxy
                 {
                 }
 
+                OnDisconnected?.Invoke();
                 HandleReconnect();
             });
         }

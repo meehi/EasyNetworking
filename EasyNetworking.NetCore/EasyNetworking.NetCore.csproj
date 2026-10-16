@@ -1,43 +1,19 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
 	<PropertyGroup>
-		<TargetFrameworks>net10.0-android;net9.0-maccatalyst;net9.0</TargetFrameworks>
-		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.26100.0</TargetFrameworks>
-		<!-- Uncomment to also build the tizen app. You will need to install tizen by following this: https://github.com/Samsung/Tizen.NET -->
-		<!-- <TargetFrameworks>$(TargetFrameworks);net9.0-tizen</TargetFrameworks> -->
-		<UseMaui>true</UseMaui>
-		<SingleProject>true</SingleProject>
+		<TargetFramework>net10.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
-
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
-		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
 
 		<Title>Networking components for .NET Core projects</Title>
 		<Description>Client-side components for .NET Core projects like client-to-client communication, chat, gaming, etc.</Description>
 		<Copyright>Copyright © 2023</Copyright>
 		<PackageProjectUrl>https://github.com/meehi/EasyNetworking</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/meehi/EasyNetworking</RepositoryUrl>
-		<PackageTags>websocket;proxy;forwarder;client-to-client;chat;communication;middleware;proxy-client</PackageTags>
-		<AssemblyVersion>1.13.0</AssemblyVersion>
-		<FileVersion>1.13.0</FileVersion>
-		<Version>1.13.0</Version>
-		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<PackageTags>websocket;proxy;forwarder;client-to-client;chat;gaming;communication;middleware;proxy-client</PackageTags>
+
+		<AssemblyVersion>1.14.0</AssemblyVersion>
+		<FileVersion>1.14.0</FileVersion>
+		<Version>1.14.0</Version>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 	</PropertyGroup>
-
-	<ItemGroup>
-	  <Folder Include="Platforms\Android\" />
-	  <Folder Include="Platforms\iOS\" />
-	  <Folder Include="Platforms\MacCatalyst\" />
-	  <Folder Include="Platforms\Tizen\" />
-	  <Folder Include="Platforms\Windows\" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <PackageReference Update="Microsoft.Maui.Controls" Version="10.0.51" />
-	</ItemGroup>
 </Project>
