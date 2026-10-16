@@ -143,19 +143,11 @@ jobs:
 
       - name: Pack EasyNetworking.NetCore
         if: steps.changes.outputs.netcore == 'true'
-        run: |
-          dotnet pack \
-            EasyNetworking.NetCore/EasyNetworking.NetCore.csproj \
-            --configuration Release \
-            --output ./artifacts
+        run: dotnet pack EasyNetworking.NetCore/EasyNetworking.NetCore.csproj --configuration Release --output ./artifacts
 
       - name: Pack EasyNetworking.AspNetCore
         if: steps.changes.outputs.aspnetcore == 'true'
-        run: |
-          dotnet pack \
-            EasyNetworking.AspNetCore/EasyNetworking.AspNetCore.csproj \
-            --configuration Release \
-            --output ./artifacts
+        run: dotnet pack EasyNetworking.AspNetCore/EasyNetworking.AspNetCore.csproj --configuration Release --output ./artifacts
 
       - name: Publish packages to NuGet.org
         shell: bash
