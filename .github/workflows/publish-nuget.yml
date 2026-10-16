@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 concurrency:
   group: publish-nuget
@@ -161,10 +162,16 @@ jobs:
           dotnet pack EasyNetworking.AspNetCore/EasyNetworking.AspNetCore.csproj --configuration Release --no-build --output ./artifacts
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      - name: NuGet Trusted Publishing login
+        uses: NuGet/login@v1
+        id: nuget-login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
       - name: Publish packages to NuGet.org
         shell: bash
         env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
         run: |
           shopt -s nullglob
           packages=(./artifacts/*.nupkg)
@@ -180,3 +187,4 @@ jobs:
               --source "https://api.nuget.org/v3/index.json" \
               --skip-duplicate
           done
+
