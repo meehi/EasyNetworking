@@ -19,7 +19,7 @@ namespace EasyNetworking.NetCore.Clients.WebSocketProxy
         private bool _disconnectRequested;
         private TimeSpan? _reconnectInterval;
 
-        private readonly ConcurrentDictionary<Type, Delegate> _handlers = new();
+        private readonly ConcurrentDictionary<Type, Func<object, Task>> _handlers = new();
         private readonly ConcurrentDictionary<Guid, Delegate> _replyHandlers = new();
         private readonly ConcurrentDictionary<object, Guid> _replyToObjects = new();
         #endregion
@@ -54,7 +54,19 @@ namespace EasyNetworking.NetCore.Clients.WebSocketProxy
 
         public bool IsConnected() => _clientWebSocket?.State == WebSocketState.Open;
 
-        public void On<T>(Action<T> callback) => _handlers.TryAdd(typeof(T), callback);
+        public void On<T>(Action<T> callback)
+        {
+            _handlers.TryAdd(typeof(T), message =>
+            {
+                callback((T)message);
+                return Task.CompletedTask;
+            });
+        }
+
+        public void On<T>(Func<T, Task> callback)
+        {
+            _handlers.TryAdd(typeof(T), message => callback((T)message));
+        }
 
         public async Task SendAsync<T>(T obj)
         {
@@ -206,8 +218,19 @@ namespace EasyNetworking.NetCore.Clients.WebSocketProxy
                 {
                     if (response.Id.HasValue)
                         _replyToObjects.TryAdd(finalMsg, response.Id.Value);
-                    handlerEntry.Value.DynamicInvoke([finalMsg]);
+                    _ = InvokeHandlerAsync(handlerEntry.Value, finalMsg);
                 }
+            }
+        }
+
+        private static async Task InvokeHandlerAsync(Func<object, Task> handler, object message)
+        {
+            try
+            {
+                await handler(message);
+            }
+            catch
+            {
             }
         }
 
