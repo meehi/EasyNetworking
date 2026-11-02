@@ -1,8 +1,8 @@
 ﻿using EasyNetworking.AspNetCore.Servers.MjpegStreamer.Models;
+using EasyNetworking.AspNetCore.Servers.MjpegStreamer.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
-using System.Collections.Concurrent;
 using System.Net.WebSockets;
 
 namespace EasyNetworking.AspNetCore.Servers.MjpegStreamer.Extensions
@@ -11,49 +11,59 @@ namespace EasyNetworking.AspNetCore.Servers.MjpegStreamer.Extensions
     {
         public static void UseMjpegStreamer(this IEndpointRouteBuilder app, string streamEndPoint, string liveStreamEndPoint)
         {
-            app.MapGet(streamEndPoint, async (HttpContext context) =>
+            var streamerService = new MjpegStreamerService();
+
+            // WebSocket endpoint - receives camera frames.
+            app.MapGet(streamEndPoint, async (context) =>
             {
-                if (context.WebSockets.IsWebSocketRequest)
+                if (!context.WebSockets.IsWebSocketRequest)
                 {
-                    using WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync();
-                    await webSocket.MjpegForwardAsync(context);
-                }
-                else
                     context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                    return;
+                }
+
+                using WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync();
+                await webSocket.MjpegForwardAsync(context, streamerService);
             });
 
-            app.MapGet(liveStreamEndPoint, async (HttpContext context) =>
+            // HTTP endpoint - broadcasts MJPEG frames to clients.
+            app.MapGet(liveStreamEndPoint, async (context) =>
             {
                 string? groupName = context.Request.Query["groupName"];
-                if (string.IsNullOrEmpty(groupName) || !Cache.Streamers.ContainsKey(groupName))
+                if (string.IsNullOrEmpty(groupName))
+                {
+                    context.Response.StatusCode = StatusCodes.Status404NotFound;
                     return;
+                }
 
-                Client client = new(context.Connection.Id, context);
+                var client = new Client(context.Connection.Id, context.Response.Body, context.RequestAborted);
+                if (!streamerService.RegisterClient(groupName, client))
+                {
+                    context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+                    return;
+                }
 
-                var sessions = Cache.Sessions.GetOrAdd(groupName, _ => new ConcurrentBag<Client>());
-                sessions.Add(client);
+                context.Response.ContentType ="multipart/x-mixed-replace; boundary=boundary";
+                context.Response.Headers.CacheControl = "no-cache, no-store, must-revalidate";
+                context.Response.Headers.Pragma = "no-cache";
+                context.Response.Headers.Expires = "0";
 
-                context.Response.ContentType = "multipart/x-mixed-replace; boundary=--boundary";
-                context.Response.StatusCode = 200;
-
-                MjpegWriter writer = new(context.Response.Body);
+                var writer = new MjpegWriter(context.Response.Body);
 
                 try
                 {
-                    await foreach (var frame in client.FrameChannel.Reader.ReadAllAsync(context.RequestAborted))
+                    await foreach (byte[] frame in client.FrameChannel.Reader.ReadAllAsync(context.RequestAborted))
                     {
                         await writer.WriteFrameAsync(frame, context.RequestAborted);
                     }
                 }
                 catch (OperationCanceledException)
                 {
+                    // The client disconnected.
                 }
                 finally
                 {
-                    if (Cache.Sessions.TryGetValue(groupName, out var clients))
-                    {
-                        Cache.Sessions[groupName] = new ConcurrentBag<Client>(clients.Where(c => c.Id != client.Id));
-                    }
+                    streamerService.RemoveClient(groupName, client);
                 }
             });
         }
